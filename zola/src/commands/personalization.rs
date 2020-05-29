@@ -43,6 +43,8 @@ fn color(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
       "ls" => list_colors(ctx, &msg),
       "delete" => delete_color(ctx, &msg, args),
       "rm" => delete_color(ctx, &msg, args),
+      "set" => set_color(ctx, &msg, args),
+      "=" => set_color(ctx, &msg, args),
       _ => {let _ = msg.channel_id.say(&ctx.http, "The color command accepts the following subcommands: add, list, delete and set");}
     },
     Err(_) => {let _ = msg.channel_id.say(&ctx.http, "The color command accepts the following subcommands: add, list, delete and set");},
@@ -54,7 +56,7 @@ fn color(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
 fn add_color(ctx: &mut Context, msg: &Message, mut args: Args) {
   // TODO: Check if calling user is Guru or above
 
-  let send_usage_message = || {let _ = msg.channel_id.say(&ctx.http, "Usage: color add label hexcode");};
+  let send_usage_message = || {let _ = msg.channel_id.say(&ctx.http, "Usage: !color add label hexcode");};
   let send_invalid_hexcode_message = || {let _ = msg.channel_id.say(&ctx.http, "Hexcodes should be a hash followed by 6 hexadecimal characters. e.g. #aba123\nFor more hexcode color examples, see https://htmlcolorcodes.com/color-chart/");};
   let send_something_went_wrong_message = || {let _ = msg.channel_id.say(&ctx.http, "I could not perform the task. Making a note for future improvement.");};
 
@@ -128,7 +130,7 @@ fn list_colors(ctx: &mut Context, msg: &Message) {
 }
 
 fn delete_color(ctx: &mut Context, msg: &Message, mut args: Args) {
-  let send_usage_message = || {let _ = msg.channel_id.say(&ctx.http, "Usage: color delete label");};
+  let send_usage_message = || {let _ = msg.channel_id.say(&ctx.http, "Usage: !color delete label");};
   let send_something_went_wrong_message = || {let _ = msg.channel_id.say(&ctx.http, "I could not perform the task. Making a note for future improvement.");};
 
   let color_label = if let Ok(color_label) = args.single_quoted::<String>() { color_label } else {
@@ -158,6 +160,65 @@ fn delete_color(ctx: &mut Context, msg: &Message, mut args: Args) {
       error!("The color role {:?} could not be deleted for this reason {:?}", role, why);
       devlog(&ctx.http, format!("ERROR: The color role {:?} could not be deleted for this reason {:?}", role, why));
     }
+  }
+
+}
+
+fn set_color(ctx: &mut Context, msg: &Message, mut args: Args) {
+  let send_usage_message = || {let _ = msg.channel_id.say(&ctx.http, "Usage: !color set label");};
+  let send_something_went_wrong_message = || {let _ = msg.channel_id.say(&ctx.http, "I could not perform the task. Making a note for future improvement.");};
+
+  let label = if let Ok(label) = args.single_quoted::<String>() { label } else {
+    send_usage_message();
+    return;
+  };
+
+  let guild_id = if let Some(guild_id) = msg.guild_id { guild_id } else {
+    send_something_went_wrong_message();
+    return;
+  };
+
+  let partial_guild = if let Ok(partial_guild) = guild_id.to_partial_guild(&ctx.http) { partial_guild } else {
+    send_something_went_wrong_message();
+    return;
+  };
+
+  let role_name = String::from("cl:") + &label;
+  let role = if let Some(role) = partial_guild.role_by_name(&role_name) { role } else {
+    let _ = msg.channel_id.say(&ctx.http, format!("No color role exists for label {}.", &label));
+    return;
+  };
+
+  let mut member = if let Some(member) = msg.member(&ctx) { member } else {
+    send_something_went_wrong_message();
+    return;
+  };
+
+  let member_roles = if let Some(member_roles) = member.roles(&ctx) { member_roles } else {
+    send_something_went_wrong_message();
+    return;
+  };
+
+  for member_role in member_roles {
+    if &member_role == role {
+      let _ = msg.channel_id.say(&ctx.http, format!("Color {} is already assigned to you.", &label));
+      return;
+    } else if member_role.name.starts_with("cl:") {
+      &member.remove_role(&ctx.http, &member_role);
+      let _ = msg.channel_id.say(&ctx.http, format!("Removed current color {}.", &member_role.name));
+    }
+  }
+
+  match &member.add_role(&ctx.http, &role.id) {
+    Ok(_) => {
+      let _ = msg.channel_id.say(&ctx.http, format!("Your self-assigned color is now {}", &label));
+      info!("{} just set their color to {}", msg.author.name, &label);
+    },
+    Err(_) => {
+      send_something_went_wrong_message();
+      error!("Failed to add color {} to you.", label);
+      let _ = devlog(&ctx.http, format!("Failed to add color {} to you.", label));
+    },
   }
 
 }
