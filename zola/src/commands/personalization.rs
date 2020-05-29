@@ -201,7 +201,7 @@ fn set_color(ctx: &mut Context, msg: &Message, mut args: Args) {
 
   for member_role in member_roles {
     if &member_role == role {
-      let _ = msg.channel_id.say(&ctx.http, format!("Color {} is already assigned to you.", &label));
+      let _ = msg.channel_id.say(&ctx.http, format!("Color {} is already assigned to you.\nIf the color change hasn't taken effect, try typing in a different channel.", &label));
       return;
     } else if member_role.name.starts_with("cl:") {
       &member.remove_role(&ctx.http, &member_role);
