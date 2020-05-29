@@ -39,6 +39,8 @@ fn color(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
   match args.single::<String>() {
     Ok(subcommand) => match subcommand.as_ref() {
       "add" => add_color(ctx, &msg, args),
+      "list" => list_colors(ctx, &msg),
+      "ls" => list_colors(ctx, &msg),
       _ => {let _ = msg.channel_id.say(&ctx.http, "The color command accepts the following subcommands: add, list, and =");}
     },
     Err(_) => {let _ = msg.channel_id.say(&ctx.http, "The color command accepts the following subcommands: add, list, and =");},
@@ -54,12 +56,12 @@ fn add_color(ctx: &mut Context, msg: &Message, mut args: Args) {
   let send_invalid_hexcode_message = || {let _ = msg.channel_id.say(&ctx.http, "Hexcodes should be a hash followed by 6 hexadecimal characters. e.g. #aba123\nFor more hexcode color examples, see https://htmlcolorcodes.com/color-chart/");};
   let send_something_went_wrong_message = || {let _ = msg.channel_id.say(&ctx.http, "I could not perform the task. Making a note for future improvement.");};
 
-  let label = if let Ok(label) = args.single::<String>() { label } else {
+  let label = if let Ok(label) = args.single_quoted::<String>() { label } else {
     send_usage_message();
     return;
   };
 
-  let hexcode = if let Ok(hexcode) = args.single::<String>() { hexcode } else {
+  let hexcode = if let Ok(hexcode) = args.single_quoted::<String>() { hexcode } else {
     send_usage_message();
     return;
   };
@@ -84,7 +86,8 @@ fn add_color(ctx: &mut Context, msg: &Message, mut args: Args) {
     return;
   };
 
-  match guild_id.create_role(&ctx, |r| r.colour(rgb).name(&label)) {
+  let role_name = String::from("cl:") + &label;
+  match guild_id.create_role(&ctx, |r| r.colour(rgb).name(role_name)) {
     Ok(_) => {
       devlog(&ctx.http, format!("INFO: {} created role {} with color <hex:{}, rgb:{}>", msg.author.name, label, hexcode, rgb));
       info!("{} created role {} with color <hex:{}, rgb:{}>", msg.author.name, label, hexcode, rgb);
@@ -95,5 +98,29 @@ fn add_color(ctx: &mut Context, msg: &Message, mut args: Args) {
       error!("Failed to create role {}. {}", label, why);
       let _ = msg.channel_id.say(&ctx.http, format!("Could not create that role at this time. Please note this is a failure on nivix's part, not mine."));
     },
+  }
+}
+
+fn list_colors(ctx: &mut Context, msg: &Message) {
+  // TODO: Don't just show color names, but show actual colors!
+  let send_something_went_wrong_message = || {let _ = msg.channel_id.say(&ctx.http, "I could not perform the task. Making a note for future improvement.");};
+
+  let guild = if let Some(guild) = msg.guild(&ctx) { guild } else {
+    send_something_went_wrong_message();
+    return;
+  };
+
+  let mut color_list: Vec<String> = Vec::new();
+
+  for (_, role) in guild.read().roles.iter() {
+    if role.name.starts_with("cl:") {
+      color_list.push(String::from(&role.name[3..]));
+    }
+  }
+
+  if color_list.len() > 0 {
+    let _ = msg.channel_id.say(&ctx.http, format!("These are the available colors: {}", color_list.join(", ")));
+  } else {
+    let _ = msg.channel_id.say(&ctx.http, "I couldn't find any color roles. Message a Guru for help.");
   }
 }
