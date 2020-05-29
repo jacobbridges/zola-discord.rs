@@ -41,9 +41,11 @@ fn color(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
       "add" => add_color(ctx, &msg, args),
       "list" => list_colors(ctx, &msg),
       "ls" => list_colors(ctx, &msg),
-      _ => {let _ = msg.channel_id.say(&ctx.http, "The color command accepts the following subcommands: add, list, and =");}
+      "delete" => delete_color(ctx, &msg, args),
+      "rm" => delete_color(ctx, &msg, args),
+      _ => {let _ = msg.channel_id.say(&ctx.http, "The color command accepts the following subcommands: add, list, delete and set");}
     },
-    Err(_) => {let _ = msg.channel_id.say(&ctx.http, "The color command accepts the following subcommands: add, list, and =");},
+    Err(_) => {let _ = msg.channel_id.say(&ctx.http, "The color command accepts the following subcommands: add, list, delete and set");},
   }
 
   Ok(())
@@ -123,4 +125,39 @@ fn list_colors(ctx: &mut Context, msg: &Message) {
   } else {
     let _ = msg.channel_id.say(&ctx.http, "I couldn't find any color roles. Message a Guru for help.");
   }
+}
+
+fn delete_color(ctx: &mut Context, msg: &Message, mut args: Args) {
+  let send_usage_message = || {let _ = msg.channel_id.say(&ctx.http, "Usage: color delete label");};
+  let send_something_went_wrong_message = || {let _ = msg.channel_id.say(&ctx.http, "I could not perform the task. Making a note for future improvement.");};
+
+  let color_label = if let Ok(color_label) = args.single_quoted::<String>() { color_label } else {
+    send_usage_message();
+    return;
+  };
+
+  let locked_guild = if let Some(guild) = msg.guild(&ctx) { guild } else {
+    send_something_went_wrong_message();
+    return;
+  };
+  let guild = locked_guild.read();
+
+  let role_name = String::from("cl:") + &color_label;
+  let role = if let Some(role) = guild.role_by_name(&role_name) { role } else {
+    let _ = msg.channel_id.say(&ctx.http, format!("There is no role with the name {}. You must be mistaken.", &color_label));
+    return;
+  };
+
+  match guild.delete_role(&ctx.http, role.id) {
+    Ok(_) => {
+      info!("Color {} has been destroyed by {}", color_label, msg.author.name);
+      devlog(&ctx.http, format!("INFO: Color {} has been destroyed by {}", color_label, msg.author.name));
+      let _ = msg.channel_id.say(&ctx.http, format!("Color {} has been destroyed.", color_label));
+    },
+    Err(why) => {
+      error!("The color role {:?} could not be deleted for this reason {:?}", role, why);
+      devlog(&ctx.http, format!("ERROR: The color role {:?} could not be deleted for this reason {:?}", role, why));
+    }
+  }
+
 }
