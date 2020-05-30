@@ -19,7 +19,7 @@ use log::{error, info};
 use chlog::devlog;
 
 use commands::{
-    personalization::*,
+    color::*,
 };
 struct ShardManagerContainer;
 
