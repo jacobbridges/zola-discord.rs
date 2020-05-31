@@ -90,7 +90,7 @@ fn add_color(ctx: &mut Context, msg: &Message, mut args: Args) {
   };
 
   if label.len() as u32 > COLOR_ROLE_NAME_MAX_WIDTH {
-    let _ = msg.channel_id.say(&ctx.http, format!("Reduce label to {} letters or less.", COLOR_ROLE_NAME_MAX_WIDTH));
+    let _ = msg.channel_id.say(&ctx.http, format!("Error. Reduce label to {} letters or less.", COLOR_ROLE_NAME_MAX_WIDTH));
     return;
   }
 
@@ -282,10 +282,9 @@ fn generate_preview_of_color_roles(colors: HashMap<String, Colour>) -> Result<&'
   if colors.len() == 0 {
     return Err(0)
   }
-  let vertical_padding = 15.0;
 
   let image_width = FONT_WIDTH * COLOR_ROLE_NAME_MAX_WIDTH as f32;
-  let image_height = (FONT_HEIGHT + vertical_padding) * colors.len() as f32;
+  let image_height = FONT_HEIGHT * colors.len() as f32;
 
   info!("Creating image with dimensions {}, {}", image_width, image_height);
 
@@ -309,17 +308,11 @@ fn generate_preview_of_color_roles(colors: HashMap<String, Colour>) -> Result<&'
   
   let mut index = 0;
   for (label, color) in colors.iter() {
-    let padding: f32;
-    if index == 0 {
-      padding = vertical_padding;
-    } else {
-      padding = vertical_padding * 0.5;
-    }
     draw_text_mut(
       &mut image,
       (|c: &Colour| { Rgb([c.r(), c.g(), c.b()]) })(&color),
       0,
-      (index as f32 * (FONT_HEIGHT + padding)).ceil() as u32,
+      (index as f32 * FONT_HEIGHT).ceil() as u32,
       scale,
       &font,
       &label,
