@@ -5,9 +5,7 @@ use std::{
   collections::HashSet,
   env,
   sync::Arc,
-  path::Path,
-  io,
-  fs::{self, DirEntry},
+  fs,
 };
 use serenity::{
   client::bridge::gateway::ShardManager,
