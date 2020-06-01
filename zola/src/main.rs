@@ -2,48 +2,95 @@ mod commands;
 mod chlog;
 
 use std::{
-    collections::HashSet,
-    env,
-    sync::Arc,
+  collections::HashSet,
+  env,
+  sync::Arc,
+  path::Path,
+  io,
+  fs::{self, DirEntry},
 };
 use serenity::{
-    client::bridge::gateway::ShardManager,
-    framework::standard::{
-      Args,
-      HelpOptions,
-      CommandGroup,
-      CommandResult,
-      help_commands,
-      StandardFramework,
-      macros::help,
-    },
-    model::{prelude::*, event::ResumedEvent, gateway::Ready},
-    prelude::*,
+  client::bridge::gateway::ShardManager,
+  framework::standard::{
+    Args,
+    HelpOptions,
+    CommandGroup,
+    CommandResult,
+    help_commands,
+    StandardFramework,
+    macros::help,
+  },
+  model::{prelude::*, event::ResumedEvent, gateway::Ready},
+  prelude::*,
 };
 use log::{error, info};
 use chlog::devlog;
-
+use rand::seq::SliceRandom;
 use commands::{
-    color::*,
+  color::*,
 };
+
 struct ShardManagerContainer;
 
 impl TypeMapKey for ShardManagerContainer {
-    type Value = Arc<Mutex<ShardManager>>;
+  type Value = Arc<Mutex<ShardManager>>;
 }
 
 struct Handler;
 
 impl EventHandler for Handler {
-    fn ready(&self, ctx: Context, _: Ready) {
-        info!("I am online. Notifying server.");
-        devlog(&ctx.http, String::from("I am online."));
+  fn ready(&self, ctx: Context, _: Ready) {
+    info!("I am online. Notifying server.");
+    devlog(&ctx.http, String::from("I am online."));
+  }
+  
+  fn message(&self, ctx: Context, message: Message) {
+
+    // Make a copy of the message and send it to lowercase, for easier matching
+    let mut content = message.content.clone();
+    content.make_ascii_lowercase();
+
+    // Handle heresy
+    if content.contains("heresy") {
+      handle_heresy(&ctx, &message, &content);
     }
     
+  }
 
-    fn resume(&self, _: Context, _: ResumedEvent) {
-        info!("Resumed");
-    }
+  fn resume(&self, _: Context, _: ResumedEvent) {
+    info!("Resumed");
+  }
+}
+
+fn handle_heresy(ctx: &Context, message: &Message, _content: &String) {
+
+  let heresy_image_directory = if let Ok(heresy_image_directory) = fs::read_dir("assets\\memes\\sense_heresy") { heresy_image_directory } else {
+    error!("Could not read heresy image directory assets\\memes\\sense_heresy");
+    return;
+  };
+
+  let mut heresy_image_paths = Vec::new();
+  for f in heresy_image_directory {
+    let unwrapped = if let Ok(f) = f { f } else {
+      error!("Could not unwrap entity in directory assets\\memes\\sense_heresy");
+      continue;
+    };
+    heresy_image_paths.push(unwrapped.path());
+  }
+
+  if heresy_image_paths.len() > 0 {
+    let random_path = if let Some(random_path) = heresy_image_paths.choose(&mut rand::thread_rng()) { random_path } else {
+      error!("Failed to grab a random image path from vec: {:?}", heresy_image_paths);
+      return;
+    };
+
+    let _ = message.channel_id.send_files(
+      &ctx.http, 
+      vec![random_path], 
+      |m| { m.content("") }
+    );
+  }
+
 }
 
 #[help]
