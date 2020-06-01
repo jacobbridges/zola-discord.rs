@@ -43,10 +43,19 @@ impl EventHandler for Handler {
   }
   
   fn message(&self, ctx: Context, message: Message) {
+    // Ignore messages from bots
+    if message.author.bot {
+      return;
+    }
 
     // Make a copy of the message and send it to lowercase, for easier matching
     let mut content = message.content.clone();
     content.make_ascii_lowercase();
+
+    // Ignore command messages
+    if content.starts_with("!") {
+      return;
+    }
 
     // Handle heresy
     if content.contains("heresy") {
