@@ -125,7 +125,7 @@ fn add(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
   };
 
   let role_name = String::from("cl:") + &label;
-  match &guild.create_role(&ctx, |r| r.colour(rgb).name(role_name).position(color_role_position as u8)) {
+  match &guild.create_role(&ctx, |r| r.mentionable(false).colour(rgb).name(role_name).position(color_role_position as u8)) {
     Ok(_) => {
       devlog(&ctx.http, format!("INFO: {} created role {} with color <hex:{}, rgb:{}>", msg.author.name, label, hexcode, rgb));
       info!("{} created role {} with color <hex:{}, rgb:{}>", msg.author.name, label, hexcode, rgb);

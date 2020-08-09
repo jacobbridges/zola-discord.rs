@@ -16,7 +16,7 @@ use serenity::{
     CommandResult,
     help_commands,
     StandardFramework,
-    macros::help,
+    macros::{group, help},
   },
   model::{prelude::*, event::ResumedEvent, gateway::Ready},
   prelude::*,
@@ -26,6 +26,7 @@ use chlog::devlog;
 use rand::seq::SliceRandom;
 use commands::{
   color::*,
+  big::*
 };
 
 struct ShardManagerContainer;
@@ -100,6 +101,10 @@ fn handle_heresy(ctx: &Context, message: &Message, _content: &String) {
 
 }
 
+#[group]
+#[commands(big)]
+struct General;
+
 #[help]
 #[individual_command_tip = "Greetings. If you require more information about a specific command, use !help command."]
 #[max_levenshtein_distance(3)]
@@ -158,6 +163,7 @@ fn main() {
     })
     .help(&MY_HELP)
     .bucket("taxing", |b| b.delay(5))
+    .group(&GENERAL_GROUP)
     .group(&COLOR_GROUP));
     
 
